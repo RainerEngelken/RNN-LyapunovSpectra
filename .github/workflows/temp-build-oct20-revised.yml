@@ -20,6 +20,20 @@ jobs:
         with:
           ref: chatgpt-temp-build-oct20-2026
 
+      - name: Patch temporary LaTeX source
+        working-directory: teaching_oct20_revised
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          theme = Path('ece598_theme.tex')
+          text = theme.read_text()
+          text = text.replace(r'\newcommand{\accent}', r'\newcommand{\tealaccent}')
+          theme.write_text(text)
+          content = Path('lecture17_content.tex')
+          text = content.read_text().replace(r'\accent{', r'\tealaccent{')
+          content.write_text(text)
+          PY
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
