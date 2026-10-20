@@ -25,12 +25,115 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+
           theme = Path('ece598_theme.tex')
-          text = theme.read_text()
-          text = text.replace(r'\newcommand{\accent}', r'\newcommand{\tealaccent}')
-          theme.write_text(text)
+          theme_text = theme.read_text()
+          theme_text = theme_text.replace(r'\newcommand{\accent}', r'\newcommand{\tealaccent}')
+          theme.write_text(theme_text)
+
           content = Path('lecture17_content.tex')
           text = content.read_text().replace(r'\accent{', r'\tealaccent{')
+
+          # Keep the timeline within the Lecture-3 text margins.
+          text = text.replace(
+              r'\draw[navy,very thick] (0.7,2.45) -- (14.1,2.45);',
+              r'\draw[navy,very thick] (0.7,2.45) -- (13.25,2.45);')
+          text = text.replace(
+              r'\foreach \x in {1.0,5.4,9.6,13.7}',
+              r'\foreach \x in {1.0,5.0,9.0,13.0}')
+          text = text.replace('at (5.4,2.63)', 'at (5.0,2.63)').replace('at (5.4,2.25)', 'at (5.0,2.25)')
+          text = text.replace('at (9.6,2.63)', 'at (9.0,2.63)').replace('at (9.6,2.25)', 'at (9.0,2.25)')
+          text = text.replace('at (13.7,2.63)', 'at (13.0,2.63)').replace('at (13.7,2.25)', 'at (13.0,2.25)')
+
+          # Break the stationary-variance equation so it fits cleanly in one column.
+          old = r'''\[
+ K_{t+1}=F(K_t)
+ =\mathbb E_Z\!\left[\phi_g\!\left(\sqrt{K_t}Z\right)^2\right],
+ \qquad Z\sim\mathcal N(0,1),
+\]'''
+          new = r'''{\small
+\[
+ \begin{aligned}
+ K_{t+1}&=F(K_t)\\
+ &=\mathbb E_Z\!\left[\phi_g\!\left(\sqrt{K_t}Z\right)^2\right],
+ \quad Z\sim\mathcal N(0,1).
+ \end{aligned}
+\]}'''
+          text = text.replace(old, new)
+
+          # Replace the requested closure slide with a compact two-column derivation.
+          start_marker = r'\begin{frame}{From the tangent map to a scalar mean-field closure}'
+          end_marker = '% -----------------------------------------------------------------------------\n\\begin{frame}{Why does the Lyapunov exponent contain one half?}'
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+          replacement = r'''\begin{frame}{From the tangent map to a scalar mean-field closure}
+\kicker{The missing derivation}
+\fontsize{10.2}{12.2}\selectfont
+\begin{columns}[T,totalwidth=\textwidth]
+\begin{column}{0.48\textwidth}
+Define squared perturbation per neuron:
+\[
+ d_t:=\frac1N\|\delta\bm x(t)\|^2.
+\]
+Let
+\[
+ a_j(t):=\phi_g'(x_j(t))\,\delta x_j(t),
+ \qquad
+ \delta x_i(t+1)=\sum_j W_{ij}a_j(t).
+\]
+Since
+\[
+ \mathbb E[W_{ij}W_{ik}]=\frac{\delta_{jk}}{N},
+\]
+the cross terms vanish:
+\[
+ \mathbb E_W\!\left[\delta x_i(t+1)^2\mid\bm a(t)\right]
+ =\frac1N\sum_j a_j(t)^2.
+\]
+\end{column}
+\begin{column}{0.48\textwidth}
+Average over postsynaptic neurons:
+\[
+ d_{t+1}\approx
+ \frac1N\sum_j \phi_g'(x_j(t))^2\,\delta x_j(t)^2.
+\]
+Large-$N$ closure:
+\[
+ \frac1N\sum_j \phi_g'(x_j)^2\delta x_j^2
+ \approx
+ \underbrace{\mathbb E_{X\sim\mathcal N(0,K_*)}[\phi_g'(X)^2]}_{\chi}
+ \underbrace{\frac1N\sum_j\delta x_j^2}_{d_t}.
+\]
+\[
+ \boxed{d_{t+1}=\chi d_t},
+ \qquad
+ \boxed{\chi=\mathbb E_Z\!\left[\phi_g'(\sqrt{K_*}Z)^2\right]}.
+\]
+\begin{block}{Closure assumptions}
+self-averaging; Gaussian state statistics; no systematic alignment between tangent amplitude and local slope.
+\end{block}
+\end{column}
+\end{columns}
+\teacherbox{$d_t=N^{-1}\|\delta x_t\|^2$; cross terms vanish; then factor the empirical average.}{This is a mean-field closure, not an identity for every finite quenched matrix. Name the two conceptual moves: random mixing kills cross terms; isotropy/self-averaging separates slopes from tangent amplitudes.}
+\end{frame}
+
+'''
+          text = text[:start] + replacement + text[end:]
+
+          # Do not nest text-mode annotation macros inside display math.
+          old = r'''\[
+ \livewrite{\lambda_{\mathrm{MF}}=\frac12\log\chi.}
+\]'''
+          new = r'''\begin{center}
+ {\fontsize{23}{27}\selectfont\livewritemath{\lambda_{\mathrm{MF}}=\frac12\log\chi}}
+\end{center}'''
+          text = text.replace(old, new)
+
+          # Safer shaded unsaturated region inside the pgfplots axis.
+          text = text.replace(
+              r'\addplot[orange,fill=lightorange,fill opacity=.45,draw=none] coordinates {(-0.5,-1.35)(-0.5,1.35)(0.5,1.35)(0.5,-1.35)} -- cycle;',
+              r'\path[fill=lightorange,opacity=.45] (axis cs:-0.5,-1.35) rectangle (axis cs:0.5,1.35);')
+
           content.write_text(text)
           PY
 
