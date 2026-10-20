@@ -25,17 +25,20 @@ def rate_Lyapunov_spectra(N, g, dt, tSim, nLE, tONS, seedIC, seedNet, seedONS, d
         seedIC: seed for random initial condition of network state
         seedNet: seed for random network realization
         seedONS: seed for random orthonormal system
-        dns: flag for brute force estimate of largest Lyapunov exponent
+        dns: flag for brute force estimate of largest Lyapunov exponent (False skips it)
 
     Returns:
         Lspectrum: Lyapunov spectrum
         LSall: normalized log of diagonal elements of R matrix
         pAll: participation ratio (localiation of first covariant Lyapunov vector)
-        LambdaMaxDNS: Largest Lyapunov exponent obtained from direct numerical simulations
-        LambdaMaxDNSall: All local growth rates of direct numerical simulations
+        LambdaMaxDNS: Largest Lyapunov exponent obtained from direct numerical simulations (None if dns=False)
+        LambdaMaxDNSall: All local growth rates of direct numerical simulations (None if dns=False)
 
     # Example use:
     rate_Lyapunov_spectra(100,4,1e-1,1e3,100,1,1,1,1,True)
+
+    # Spectrum without direct numerical simulations (last two return values are None):
+    rate_Lyapunov_spectra(100,4,1e-1,1e3,100,1,1,1,1,False)
 
     # Convergence of direct numerical vs Jacobian based max local Lyapunv exponent:
     Lspectrum,LSall,pAll,LambdaMaxDNS,LambdaMaxDNSall = rate_Lyapunov_spectra(100,4,1e-1,1e2,2,0.1,1,1,1,True)
@@ -83,10 +86,10 @@ def rate_Lyapunov_spectra(N, g, dt, tSim, nLE, tONS, seedIC, seedNet, seedONS, d
     pAll = zeros(nONS)
     lsidx = -1
 
+    LambdaMaxDNS = LambdaMaxDNSall = None
     if dns:
         pertSz = 1e-6  # initial perturbation size for brute force max. Lyapunov exponent
         hPert = h[:, 0] + pertSz*q[:, 0]/norm(q[:, 0])
-        LambdaMaxDNSall = []
 
     for n in range(nStep + nStepTransient + nStepTransientONS-1):
         h[:, n+1] = h[:, n]*(1-dt)+dot(J, tanh(h[:, n]))*dt  # network dynamics
@@ -140,7 +143,7 @@ def rate_Lyapunov_spectra(N, g, dt, tSim, nLE, tONS, seedIC, seedNet, seedONS, d
     xlim(0, dt*h.shape[1])
 
     subplot(223)  # Plot Lyapunov spectrum
-    plot(1.0*arange(nLE)/nLE, Lspectrum, '.k')
+    plot(1.0*arange(nLE)/N, Lspectrum, '.k')
     plot(1.0*arange(nLE)/N, zeros(nLE), ':', color=[0.5, 0.5, 0.5])
     ylabel(r'$\lambda_i (1/\tau)$')
     xlabel(r'$i/N$')
