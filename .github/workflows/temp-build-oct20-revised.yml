@@ -27,8 +27,6 @@ jobs:
           from pathlib import Path
           theme = Path('ece598_theme.tex')
           t = theme.read_text().replace(r'\newcommand{\accent}', r'\newcommand{\tealaccent}')
-          t = t.replace(r'{\color{writeblue}$#1$}', r'{\color{writeblue}\ensuremath{#1}}')
-          t = t.replace(r'\else\ifannotated $#1$\else{\color{white}$#1$}', r'\else\ifannotated \ensuremath{#1}\else{\color{white}\ensuremath{#1}}')
           theme.write_text(t)
 
           content = Path('lecture17_content.tex')
@@ -39,7 +37,6 @@ jobs:
           t = t.replace('at (9.6,2.63)', 'at (9.0,2.63)').replace('at (9.6,2.25)', 'at (9.0,2.25)')
           t = t.replace('at (13.7,2.63)', 'at (13.0,2.63)').replace('at (13.7,2.25)', 'at (13.0,2.25)')
 
-          # Reflow the stationary-variance equation in its narrow column.
           needle = ' K_{t+1}=F(K_t)'
           pos = t.index(needle)
           a = t.rfind(r'\[', 0, pos)
@@ -56,7 +53,13 @@ jobs:
           t = t[:a] + eq + t[b:]
 
           t = t.replace(r'\begin{frame}{From the tangent map to a scalar mean-field closure}' + '\n' + r'\kicker{The missing derivation}' + '\n' + r'\small', r'\begin{frame}{From the tangent map to a scalar mean-field closure}' + '\n' + r'\kicker{The missing derivation}' + '\n' + r'\fontsize{7.8}{9.2}\selectfont' + '\n' + r'\setlength{\abovedisplayskip}{1pt}\setlength{\belowdisplayskip}{1pt}')
-          t = t.replace(r'\livewrite{\lambda_{\mathrm{MF}}=\frac12\log\chi.}', r'\livewritemath{\lambda_{\mathrm{MF}}=\frac12\log\chi}')
+
+          old = '\\[\n \\livewrite{\\lambda_{\\mathrm{MF}}=\\frac12\\log\\chi.}\n\\]'
+          new = '\\begin{center}\n{\\fontsize{23}{27}\\selectfont \\livewrite{$\\lambda_{\\mathrm{MF}}=\\frac12\\log\\chi$}}\n\\end{center}'
+          if old not in t:
+              raise RuntimeError('Expected conditional Lyapunov block not found')
+          t = t.replace(old, new)
+
           t = t.replace(r'\addplot[orange,fill=lightorange,fill opacity=.45,draw=none] coordinates {(-0.5,-1.35)(-0.5,1.35)(0.5,1.35)(0.5,-1.35)} -- cycle;', r'\path[fill=lightorange,opacity=.45] (axis cs:-0.5,-1.35) rectangle (axis cs:0.5,1.35);')
           content.write_text(t)
           PY
