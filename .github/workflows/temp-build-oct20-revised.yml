@@ -1,0 +1,77 @@
+name: Temporary build revised ECE 598 Oct 20 materials
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/temp-build-oct20-revised.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out temporary materials branch
+        uses: actions/checkout@v4
+        with:
+          ref: chatgpt-temp-build-oct20-2026
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy matplotlib nbformat nbconvert ipykernel
+
+      - name: Build and execute notebook
+        working-directory: teaching_oct20_revised
+        run: |
+          python build_notebook.py
+          jupyter nbconvert --to notebook --execute ECE598_Oct20_DMFT_Lyapunov_DotsOnLine_revised.ipynb \
+            --inplace --ExecutePreprocessor.timeout=900
+
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y latexmk texlive-xetex texlive-latex-extra texlive-pictures texlive-fonts-recommended fonts-roboto poppler-utils zip
+
+      - name: Compile three Beamer versions
+        working-directory: teaching_oct20_revised
+        run: |
+          latexmk -xelatex -interaction=nonstopmode -halt-on-error ECE598_L17_Oct20_unannotated.tex
+          latexmk -xelatex -interaction=nonstopmode -halt-on-error ECE598_L17_Oct20_annotated.tex
+          latexmk -xelatex -interaction=nonstopmode -halt-on-error ECE598_L17_Oct20_annotated_teacher.tex
+          pdfinfo ECE598_L17_Oct20_unannotated.pdf
+          pdfinfo ECE598_L17_Oct20_annotated.pdf
+          pdfinfo ECE598_L17_Oct20_annotated_teacher.pdf
+
+      - name: Package LaTeX sources
+        working-directory: teaching_oct20_revised
+        run: |
+          zip -r ECE598_L17_Oct20_LaTeX_sources.zip \
+            ece598_theme.tex lecture17_content.tex \
+            ECE598_L17_Oct20_unannotated.tex \
+            ECE598_L17_Oct20_annotated.tex \
+            ECE598_L17_Oct20_annotated_teacher.tex \
+            build_notebook.py assets
+
+      - name: Upload materials
+        uses: actions/upload-artifact@v4
+        with:
+          name: ECE598-Oct20-revised-materials
+          if-no-files-found: error
+          path: |
+            teaching_oct20_revised/ECE598_L17_Oct20_unannotated.pdf
+            teaching_oct20_revised/ECE598_L17_Oct20_annotated.pdf
+            teaching_oct20_revised/ECE598_L17_Oct20_annotated_teacher.pdf
+            teaching_oct20_revised/ECE598_L17_Oct20_LaTeX_sources.zip
+            teaching_oct20_revised/ECE598_Oct20_DMFT_Lyapunov_DotsOnLine_revised.ipynb
+            teaching_oct20_revised/assets/convergence.pdf
+            teaching_oct20_revised/assets/dots_on_line.pdf
+          retention-days: 2
